@@ -1,0 +1,15 @@
+[package]
+name = "genetic-algorithm"
+version = "0.1.0"
+authors = ["rufus-stone <60827786+rufus-stone@users.noreply.github.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rand = "0.8.3"
+
+[dev-dependencies]
+rand_chacha = "0.3.0"
+approx = "0.4.0"
+maplit = "1.0.2"

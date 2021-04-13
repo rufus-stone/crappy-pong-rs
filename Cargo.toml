@@ -1,15 +1,2 @@
-[package]
-name = "pong-rs"
-version = "0.1.0"
-authors = ["rufus-stone <60827786+rufus-stone@users.noreply.github.com>"]
-edition = "2018"
-
-[dependencies]
-simple_logger = "1.11.0"
-log = "0.4.14"
-ggez = "0.6.0-rc1"
-glam = { version = "0.14.0", features = ["mint"] }
-rand = "0.8.3"
-
-[dev-dependencies]
-rand_chacha = "0.3.0"
+[workspace]
+members = ["app", "libs/*"]
