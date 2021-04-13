@@ -14,24 +14,36 @@ pub enum Player {
     Computer,
 }
 
-trait Move {
+pub trait Move {
     fn make_move(&self, ctx: &mut ggez::Context) -> f32;
+    fn name(&self) -> &'static str;
 }
 
+impl std::fmt::Debug for dyn Move {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(fmt, "Move {{ member: {:?} }}", self.name())
+    }
+}
+#[derive(Debug)]
 pub struct Controls {
     up: keyboard::KeyCode,
     down: keyboard::KeyCode,
 }
 
+#[derive(Debug)]
 pub struct HumanPlayer {
     controls: Controls,
 }
 
 impl HumanPlayer {
     pub fn new(up: keyboard::KeyCode, down: keyboard::KeyCode) -> HumanPlayer {
-        HumanPlayer {
+        let player = HumanPlayer {
             controls: Controls { up, down },
-        }
+        };
+
+        log::warn!("New human player: {:?}", &player);
+
+        player
     }
 }
 
@@ -46,12 +58,28 @@ impl Move for HumanPlayer {
             0.0
         }
     }
+
+    fn name(&self) -> &'static str {
+        "Human"
+    }
 }
 
+#[derive(Default)]
 pub struct AiPlayer {}
+
+impl AiPlayer {
+    pub fn new() -> AiPlayer {
+        log::warn!("New AI player");
+        AiPlayer {}
+    }
+}
 
 impl Move for AiPlayer {
     fn make_move(&self, ctx: &mut ggez::Context) -> f32 {
         todo!()
+    }
+
+    fn name(&self) -> &'static str {
+        "AI"
     }
 }

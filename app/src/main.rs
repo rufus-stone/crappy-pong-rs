@@ -1,17 +1,19 @@
 use ggez::*;
 
-mod ai;
-mod core;
-mod player;
-mod settings;
-
-use settings::*;
+use pong::settings::*;
+use pong::*;
 
 fn main() -> GameResult {
+    // Turn on logging
     simple_logger::SimpleLogger::new()
         .with_level(log::LevelFilter::Warn)
         .init()
         .unwrap();
+
+    // What kind of game are we playing? 2 player, 1 player, etc.?
+    let game_mode = cli::get_game_mode().unwrap_or(PLAYER_VS_PLAYER);
+
+    log::warn!("game_mode: {:?}", &game_mode);
 
     // Create a new ggez Context and EventsLoop
     let (ctx, event_loop) = ContextBuilder::new(settings::GAME_TITLE, "Rufus Stone")
@@ -27,7 +29,7 @@ fn main() -> GameResult {
         .unwrap();
 
     // Create a GameState object
-    let game_state = core::GameState::new(PLAYER_VS_PLAYER).unwrap();
+    let game_state = core::GameState::new(game_mode).unwrap();
 
     // Start the game!
     ggez::event::run(ctx, event_loop, game_state);

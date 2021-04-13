@@ -1,0 +1,17 @@
+[package]
+name = "pong"
+version = "0.1.0"
+authors = ["rufus-stone <60827786+rufus-stone@users.noreply.github.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+#simple_logger = "1.11.0"
+log = "0.4.14"
+ggez = "0.6.0-rc1"
+glam = { version = "0.14.0", features = ["mint"] }
+rand = "0.8.3"
+neural-network = { path = "../neural-network" }
+genetic-algorithm = { path = "../genetic-algorithm" }
+structopt = "0.3.21"

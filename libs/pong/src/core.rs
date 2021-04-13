@@ -25,6 +25,8 @@ pub struct GameState {
     score: Score,
     pause_for: u64,
     mode: Mode,
+    player_one: Box<dyn Move>,
+    player_two: Option<Box<dyn Move>>,
 }
 
 impl GameState {
@@ -38,7 +40,7 @@ impl GameState {
                 PADDLE_HEIGHT,
             ),
 
-            paddle_right: match mode {
+            paddle_right: match &mode {
                 Mode::OnePlayer(_) => Rect::new(
                     SCREEN_WIDTH - X_OFFSET - PADDLE_WIDTH,
                     0.0,
@@ -59,6 +61,44 @@ impl GameState {
             ),
             score: Score::default(),
             pause_for: 0,
+            player_one: match &mode {
+                Mode::OnePlayer(p1) => match p1 {
+                    Player::Human => {
+                        log::warn!("P1: Human");
+                        Box::new(HumanPlayer::new(keyboard::KeyCode::W, keyboard::KeyCode::S))
+                    }
+                    Player::Computer => {
+                        log::warn!("P1: AI");
+                        Box::new(AiPlayer::new())
+                    }
+                },
+                Mode::TwoPlayer(p1, _) => match p1 {
+                    Player::Human => {
+                        log::warn!("P1: Human vs...");
+                        Box::new(HumanPlayer::new(keyboard::KeyCode::W, keyboard::KeyCode::S))
+                    }
+                    Player::Computer => {
+                        log::warn!("P1: AI vs...");
+                        Box::new(AiPlayer::new())
+                    }
+                },
+            },
+            player_two: match &mode {
+                Mode::TwoPlayer(_, p2) => match p2 {
+                    Player::Human => {
+                        log::warn!("... P2: Human");
+                        Some(Box::new(HumanPlayer::new(
+                            keyboard::KeyCode::Up,
+                            keyboard::KeyCode::Down,
+                        )))
+                    }
+                    Player::Computer => {
+                        log::warn!("... P2: AI");
+                        Some(Box::new(AiPlayer::new()))
+                    }
+                },
+                _ => None,
+            },
             mode,
         })
     }
@@ -92,25 +132,16 @@ impl GameState {
         }
     }
 
-    fn handle_player_1_input(&mut self, ctx: &mut Context) {
-        // Check for key presses and move Player 1 paddle accordingly
-        if keyboard::is_key_pressed(ctx, keyboard::KeyCode::W) {
-            move_paddle(&mut self.paddle_left, -PADDLE_SPEED);
-        }
+    /// Checks for Human and/or AI player input and moves the paddles accordingly
+    fn handle_input(&mut self, ctx: &mut Context) {
+        // Check player 1 input
+        let p1_move = self.player_one.make_move(ctx);
+        move_paddle(&mut self.paddle_left, p1_move);
 
-        if keyboard::is_key_pressed(ctx, keyboard::KeyCode::S) {
-            move_paddle(&mut self.paddle_left, PADDLE_SPEED);
-        }
-    }
-
-    fn handle_player_2_input(&mut self, ctx: &mut Context) {
-        // Check for key presses and move Player 2 paddle accordingly
-        if keyboard::is_key_pressed(ctx, keyboard::KeyCode::Up) {
-            move_paddle(&mut self.paddle_right, -PADDLE_SPEED);
-        }
-
-        if keyboard::is_key_pressed(ctx, keyboard::KeyCode::Down) {
-            move_paddle(&mut self.paddle_right, PADDLE_SPEED);
+        // Check player 2 input, but only if we're playing a 2 player game
+        if let Some(player_two) = &self.player_two {
+            let p2_move = player_two.make_move(ctx);
+            move_paddle(&mut self.paddle_right, p2_move);
         }
     }
 }
@@ -132,22 +163,8 @@ impl event::EventHandler for GameState {
         // Only handle key presses if the game isn't paused
         match self.pause_for {
             0 => {
-                // TODO: Change this to something more sensible!!!
-                match &self.mode {
-                    Mode::OnePlayer(p1) => match p1 {
-                        Player::Human => self.handle_player_1_input(ctx),
-                        Player::Computer => {}
-                    },
-                    Mode::TwoPlayer(p1, p2) => match (p1, p2) {
-                        (Player::Human, Player::Human) => {
-                            self.handle_player_1_input(ctx);
-                            self.handle_player_2_input(ctx);
-                        }
-                        (Player::Human, Player::Computer) => {}
-                        (Player::Computer, Player::Human) => {}
-                        (Player::Computer, Player::Computer) => {}
-                    },
-                }
+                // Handle player and/or AI control input
+                self.handle_input(ctx);
 
                 // Move the ball based on its velocity
                 self.ball.rect.translate(self.ball.vel);
