@@ -41,6 +41,10 @@ impl Layer {
             .map(|neuron| neuron.propagate(&inputs))
             .collect()
     }
+
+    pub fn neurons(&self) -> &[Neuron] {
+        &self.neurons
+    }
 }
 
 #[cfg(test)]

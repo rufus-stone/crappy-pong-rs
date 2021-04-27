@@ -4,9 +4,9 @@ use mutation::MutationMethod;
 use rand::RngCore;
 use selection::SelectionMethod;
 
-mod chromosome;
+pub mod chromosome;
 pub mod crossover;
-mod individual;
+pub mod individual;
 pub mod mutation;
 pub mod selection;
 mod statistics;

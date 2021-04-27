@@ -15,3 +15,7 @@ rand = "0.8.3"
 neural-network = { path = "../neural-network" }
 genetic-algorithm = { path = "../genetic-algorithm" }
 structopt = "0.3.21"
+
+[dev-dependencies]
+rand_chacha = "0.3.0"
+approx = "0.4.0"

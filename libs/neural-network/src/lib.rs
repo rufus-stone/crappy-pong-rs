@@ -5,7 +5,9 @@ pub mod topology;
 use layer::Layer;
 use topology::LayerTopology;
 
-#[derive(Debug)]
+use std::iter::once;
+
+#[derive(Clone, Debug)]
 pub struct Network {
     layers: Vec<Layer>,
 }
@@ -37,6 +39,17 @@ impl Network {
         self.layers
             .iter()
             .fold(inputs, |inputs, layer| layer.propagate(inputs))
+    }
+
+    pub fn layers(&self) -> &[Layer] {
+        &self.layers
+    }
+
+    pub fn weights(&self) -> impl Iterator<Item = f32> + '_ {
+        self.layers
+            .iter()
+            .flat_map(|layer| layer.neurons.iter())
+            .flat_map(|neuron| once(neuron.bias).chain(neuron.weights.iter().cloned()))
     }
 }
 

@@ -63,23 +63,3 @@ impl Move for HumanPlayer {
         "Human"
     }
 }
-
-#[derive(Default)]
-pub struct AiPlayer {}
-
-impl AiPlayer {
-    pub fn new() -> AiPlayer {
-        log::warn!("New AI player");
-        AiPlayer {}
-    }
-}
-
-impl Move for AiPlayer {
-    fn make_move(&self, ctx: &mut ggez::Context) -> f32 {
-        todo!()
-    }
-
-    fn name(&self) -> &'static str {
-        "AI"
-    }
-}

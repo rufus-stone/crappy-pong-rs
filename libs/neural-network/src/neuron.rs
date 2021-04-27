@@ -1,3 +1,5 @@
+use core::f32;
+
 use rand::Rng;
 
 #[derive(Debug, Clone)]
@@ -59,6 +61,14 @@ impl Neuron {
 
         // Finally, add the bias to the sum, and return whichever is the bigger of that value or 0.0
         (self.bias + output).max(0.0)
+    }
+
+    pub fn bias(&self) -> f32 {
+        self.bias
+    }
+
+    pub fn weights(&self) -> &[f32] {
+        &self.weights
     }
 }
 

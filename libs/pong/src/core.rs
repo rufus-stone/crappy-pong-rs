@@ -5,7 +5,9 @@ use ggez::input::keyboard;
 use ggez::mint::*;
 use ggez::{Context, GameResult};
 use glam::*;
+use rand::RngCore;
 
+use crate::ai::player::*;
 use crate::player::*;
 use crate::settings::*;
 
@@ -13,6 +15,12 @@ use crate::settings::*;
 pub enum Wall {
     Top,
     Bottom,
+    Left,
+    Right,
+}
+
+#[derive(Debug)]
+pub enum Paddle {
     Left,
     Right,
 }
@@ -31,7 +39,7 @@ pub struct GameState {
 
 impl GameState {
     /// Create a new GameState struct for a game with the specified number of players
-    pub fn new(mode: Mode) -> GameResult<GameState> {
+    pub fn new(mode: Mode, prng: &mut dyn RngCore) -> GameResult<GameState> {
         Ok(GameState {
             paddle_left: Rect::new(
                 X_OFFSET,
@@ -54,11 +62,7 @@ impl GameState {
                     PADDLE_HEIGHT,
                 ),
             },
-            ball: Ball::new(
-                SCREEN_WIDTH / 2.0 - BALL_RADIUS / 2.0,
-                SCREEN_HEIGHT / 2.0 - BALL_RADIUS / 2.0,
-                BALL_RADIUS,
-            ),
+            ball: Ball::random(), //Ball::new(SCREEN_WIDTH / 2.0 - BALL_RADIUS / 2.0, SCREEN_HEIGHT / 2.0 - BALL_RADIUS / 2.0, BALL_RADIUS,),
             score: Score::default(),
             pause_for: 0,
             player_one: match &mode {
@@ -69,7 +73,7 @@ impl GameState {
                     }
                     Player::Computer => {
                         log::warn!("P1: AI");
-                        Box::new(AiPlayer::new())
+                        Box::new(AiPlayer::random(&Config::default(), prng))
                     }
                 },
                 Mode::TwoPlayer(p1, _) => match p1 {
@@ -79,7 +83,7 @@ impl GameState {
                     }
                     Player::Computer => {
                         log::warn!("P1: AI vs...");
-                        Box::new(AiPlayer::new())
+                        Box::new(AiPlayer::random(&Config::default(), prng))
                     }
                 },
             },
@@ -94,7 +98,7 @@ impl GameState {
                     }
                     Player::Computer => {
                         log::warn!("... P2: AI");
-                        Some(Box::new(AiPlayer::new()))
+                        Some(Box::new(AiPlayer::random(&Config::default(), prng)))
                     }
                 },
                 _ => None,
@@ -104,16 +108,71 @@ impl GameState {
     }
 
     /// Check if the ball hit a paddle
-    fn ball_hit_paddle(&mut self) -> bool {
+    fn ball_hit_paddle(&mut self) -> Option<Paddle> {
         if self.ball.vel.x < 0.0 && self.ball.rect.overlaps(&self.paddle_left) {
             // In 1 player mode we also score a point
             if let Mode::OnePlayer(_) = self.mode {
                 self.score.p1 += 1;
             }
 
-            true
+            Some(Paddle::Left)
+        } else if self.ball.vel.x > 0.0 && self.ball.rect.overlaps(&self.paddle_right) {
+            Some(Paddle::Right)
         } else {
-            self.ball.vel.x > 0.0 && self.ball.rect.overlaps(&self.paddle_right)
+            None
+        }
+    }
+
+    /// Calculate the new velocity vector of the ball after bouncing off a given paddle
+    fn ball_velocity_after_bouncing_off(&mut self, paddle: Paddle) -> Vector2<f32> {
+        // What is the Y axis value of the centre position of the ball?
+        let ball_centre_y: f32 = self.ball.rect.center().y;
+
+        match (&self.mode, &paddle) {
+            // In 1 player mode when the right paddle is hit, just reverse the ball direction
+            (Mode::OnePlayer(_), Paddle::Right) => {
+                log::warn!("One player right paddle!");
+
+                Vector2::<f32> {
+                    x: -self.ball.vel.x,
+                    y: self.ball.vel.y,
+                }
+            }
+            // In all other situations, work it out properly
+            (_, _) => {
+                // What is the Y axis value of the centre position of the whichever paddle was hit?
+                let paddle_centre_y: f32 = match &paddle {
+                    Paddle::Left => self.paddle_left.center().y,
+                    Paddle::Right => self.paddle_right.center().y,
+                };
+
+                // How far away from the paddle centre did the ball hit?
+                let hit_y = paddle_centre_y - ball_centre_y;
+
+                // Normalise this offset by the paddle height
+                let hit_norm = hit_y / (PADDLE_HEIGHT / 2.0);
+
+                // Calculate the bounce angle
+                let bounce_angle = hit_norm * BALL_MAX_BOUNCE_ANGLE;
+
+                let bx = -self.ball.spd * bounce_angle.cos();
+                let by = self.ball.vel.y * bounce_angle.sin();
+
+                log::warn!(
+                    "bvx: {}, bvy: {}, bcy: {}, pcy: {}, hy: {}, hn: {}, ba: {}, bx: {}, by: {}",
+                    self.ball.vel.x,
+                    self.ball.vel.y,
+                    ball_centre_y,
+                    paddle_centre_y,
+                    hit_y,
+                    hit_norm,
+                    bounce_angle,
+                    bx,
+                    by
+                );
+
+                Vector2::<f32> { x: bx, y: by }
+            }
         }
     }
 
@@ -170,17 +229,23 @@ impl event::EventHandler for GameState {
                 self.ball.rect.translate(self.ball.vel);
 
                 // Check for ball-on-paddle collisions and reverse horizontal velocity of the ball (and increase it slightly!)
-                if self.ball_hit_paddle() {
-                    log::warn!("Paddle hit!");
-                    self.ball.vel.x *= -1.1;
+                if let Some(paddle) = self.ball_hit_paddle() {
+                    log::warn!("{:?} paddle hit!", paddle);
+
+                    // TODO: Where on the paddle did it hit? Adjust the velocity vector accordingly -- THIS IS BROKEN
+                    //self.ball.vel = self.ball_velocity_after_bouncing_off(paddle);
+
+                    // Reverse the direction and slightly increase the horizontal speed
+                    self.ball.vel.x *= -1.01;
                 }
 
                 // Check for ball-on-wall collisions act accordingly
                 match self.ball_hit_wall() {
                     // If it hit the top or bottom wall, just reverse the vertical velocity of the ball (and increase it slightly!)
                     Some(Wall::Top) | Some(Wall::Bottom) => {
-                        log::warn!("Top wall hit!");
-                        self.ball.vel.y *= -1.1;
+                        log::warn!("Top/Bottom wall hit!");
+                        //self.ball.vel.y *= -1.1;
+                        self.ball.bounce_off(Wall::Top); // This is a little clumsy, but a Wall::Top or Wall::Bottom will do the same thing
                     }
 
                     // If it hit the left wall, either score a point for P2 in a 2 player game, or dock a point from P1 in a 1 player game
@@ -319,13 +384,15 @@ impl event::EventHandler for GameState {
 struct Ball {
     rect: Rect,
     vel: Vector2<f32>,
+    spd: f32,
 }
 
 impl Ball {
     fn new(x: f32, y: f32, radius: f32) -> Ball {
         Ball {
             rect: Rect::new(x, y, radius, radius),
-            vel: Vector2::<f32> { x: 1.0, y: -0.5 },
+            vel: Vector2::<f32> { x: 0.0, y: 0.0 }, //vel: Vector2::<f32> { x: 1.0, y: -0.5 },
+            spd: 0.0,
         }
     }
 
@@ -336,16 +403,16 @@ impl Ball {
 
         let mut random_velocity = || -> f32 {
             let flip = prng.gen::<bool>();
-            let mut vel = prng.gen_range(BALL_MIN_VEL..=BALL_MAX_VEL);
-            // TODO: Account for edge case where both velocities are randomly set to 0.0
-            if flip {
-                vel = -vel;
+
+            match flip {
+                true => -prng.gen_range(BALL_MIN_VEL..=BALL_MAX_VEL),
+                false => prng.gen_range(BALL_MIN_VEL..=BALL_MAX_VEL),
             }
-            vel
         };
 
         let vel_x = random_velocity();
         let vel_y = random_velocity();
+        let spd: f32 = vel_x.hypot(vel_y);
 
         Ball {
             rect: Rect::new(
@@ -355,6 +422,35 @@ impl Ball {
                 BALL_RADIUS,
             ),
             vel: Vector2::<f32> { x: vel_x, y: vel_y },
+            spd,
+        }
+    }
+
+    fn bounce_off(&mut self, wall: Wall) {
+        match wall {
+            Wall::Top | Wall::Bottom => {
+                if self.vel.y > 0.0 {
+                    log::warn!(
+                        "pos - bvy: {}, bvy * BALL_ACCELERATION: {}, clamped: {}, r: {}",
+                        self.vel.y,
+                        self.vel.y * BALL_ACCELERATION,
+                        (self.vel.y * BALL_ACCELERATION).clamp(BALL_MIN_VEL, BALL_MAX_VEL),
+                        -(self.vel.y * BALL_ACCELERATION).clamp(BALL_MIN_VEL, BALL_MAX_VEL)
+                    );
+                    self.vel.y =
+                        (self.vel.y * -BALL_ACCELERATION).clamp(-BALL_MAX_VEL, -BALL_MIN_VEL);
+                } else {
+                    log::warn!(
+                        "neg - bvy: {}, bvy * BALL_ACCELERATION: {}, clamped: {}, r: {}",
+                        self.vel.y,
+                        self.vel.y * BALL_ACCELERATION,
+                        (self.vel.y * BALL_ACCELERATION).clamp(BALL_MIN_VEL, BALL_MAX_VEL),
+                        -(self.vel.y * BALL_ACCELERATION).clamp(BALL_MIN_VEL, BALL_MAX_VEL)
+                    );
+                    self.vel.y = (self.vel.y * BALL_ACCELERATION).clamp(BALL_MIN_VEL, BALL_MAX_VEL);
+                }
+            }
+            _ => {}
         }
     }
 }
