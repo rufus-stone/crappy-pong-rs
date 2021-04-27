@@ -1,12 +1,15 @@
 use rand::RngCore;
 
 use crate::player::Move;
+use crate::player::Snapshot;
 use crate::settings::*;
 
 use super::brain::*;
+use super::eye::*;
 
 pub struct AiPlayer {
     pub(crate) brain: Brain,
+    pub(crate) eye: Eye,
     pub(crate) config: Config,
     pub(crate) score: i16,
 }
@@ -18,6 +21,7 @@ impl AiPlayer {
 
         AiPlayer {
             brain,
+            eye: Eye::new(config),
             config: config.clone(),
             score: 0,
         }
@@ -37,18 +41,30 @@ impl AiPlayer {
         }
     }
 
-    pub fn step(&self) -> f32 {
+    pub fn step(&self, _snapshot: &Snapshot) -> f32 {
+        // Break out the paddle and ball from the snapshot of game state
+        let paddle = _snapshot.paddle;
+        let ball = _snapshot.ball.clone();
+
         // First, check what we can see
+        let eye = self.eye.step(&self.config, paddle, &ball);
 
         // Second, think about it
-        self.brain.step(&self.config);
-        AiPlayer::random_move()
+        self.brain.step(&self.config, &eye)
     }
 }
 
 impl Move for AiPlayer {
-    fn make_move(&self, ctx: &mut ggez::Context) -> f32 {
-        self.step()
+    fn make_move(&self, ctx: &mut ggez::Context, _snapshot: &Snapshot) -> f32 {
+        let desired_move = self.step(_snapshot);
+
+        if desired_move < 0.0 {
+            -PADDLE_SPEED
+        } else if desired_move > 0.0 {
+            PADDLE_SPEED
+        } else {
+            0.0
+        }
     }
 
     fn name(&self) -> &'static str {

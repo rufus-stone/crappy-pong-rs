@@ -31,7 +31,8 @@ fn main() -> GameResult {
         .unwrap();
 
     // Create a GameState object
-    let mut prng = ChaCha8Rng::from_seed(Default::default());
+    //let mut prng = ChaCha8Rng::from_seed(Default::default());
+    let mut prng = ChaCha8Rng::seed_from_u64(42);
     let game_state = core::GameState::new(game_mode, &mut prng).unwrap();
 
     // Start the game!

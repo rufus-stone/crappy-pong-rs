@@ -123,59 +123,6 @@ impl GameState {
         }
     }
 
-    /// Calculate the new velocity vector of the ball after bouncing off a given paddle
-    fn ball_velocity_after_bouncing_off(&mut self, paddle: Paddle) -> Vector2<f32> {
-        // What is the Y axis value of the centre position of the ball?
-        let ball_centre_y: f32 = self.ball.rect.center().y;
-
-        match (&self.mode, &paddle) {
-            // In 1 player mode when the right paddle is hit, just reverse the ball direction
-            (Mode::OnePlayer(_), Paddle::Right) => {
-                log::warn!("One player right paddle!");
-
-                Vector2::<f32> {
-                    x: -self.ball.vel.x,
-                    y: self.ball.vel.y,
-                }
-            }
-            // In all other situations, work it out properly
-            (_, _) => {
-                // What is the Y axis value of the centre position of the whichever paddle was hit?
-                let paddle_centre_y: f32 = match &paddle {
-                    Paddle::Left => self.paddle_left.center().y,
-                    Paddle::Right => self.paddle_right.center().y,
-                };
-
-                // How far away from the paddle centre did the ball hit?
-                let hit_y = paddle_centre_y - ball_centre_y;
-
-                // Normalise this offset by the paddle height
-                let hit_norm = hit_y / (PADDLE_HEIGHT / 2.0);
-
-                // Calculate the bounce angle
-                let bounce_angle = hit_norm * BALL_MAX_BOUNCE_ANGLE;
-
-                let bx = -self.ball.spd * bounce_angle.cos();
-                let by = self.ball.vel.y * bounce_angle.sin();
-
-                log::warn!(
-                    "bvx: {}, bvy: {}, bcy: {}, pcy: {}, hy: {}, hn: {}, ba: {}, bx: {}, by: {}",
-                    self.ball.vel.x,
-                    self.ball.vel.y,
-                    ball_centre_y,
-                    paddle_centre_y,
-                    hit_y,
-                    hit_norm,
-                    bounce_angle,
-                    bx,
-                    by
-                );
-
-                Vector2::<f32> { x: bx, y: by }
-            }
-        }
-    }
-
     /// Check if the ball hit a wall
     fn ball_hit_wall(&mut self) -> Option<Wall> {
         if self.ball.vel.y < 0.0 && self.ball.rect.top() < 0.0 {
@@ -194,12 +141,14 @@ impl GameState {
     /// Checks for Human and/or AI player input and moves the paddles accordingly
     fn handle_input(&mut self, ctx: &mut Context) {
         // Check player 1 input
-        let p1_move = self.player_one.make_move(ctx);
+        let p1_move = self
+            .player_one
+            .make_move(ctx, &Snapshot::new(&self.paddle_left, &self.ball));
         move_paddle(&mut self.paddle_left, p1_move);
 
         // Check player 2 input, but only if we're playing a 2 player game
         if let Some(player_two) = &self.player_two {
-            let p2_move = player_two.make_move(ctx);
+            let p2_move = player_two.make_move(ctx, &Snapshot::new(&self.paddle_right, &self.ball));
             move_paddle(&mut self.paddle_right, p2_move);
         }
     }
@@ -219,74 +168,78 @@ fn move_paddle(paddle: &mut Rect, amount: f32) {
 impl event::EventHandler for GameState {
     /// Called every frame
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
-        // Only handle key presses if the game isn't paused
-        match self.pause_for {
-            0 => {
-                // Handle player and/or AI control input
-                self.handle_input(ctx);
+        const DESIRED_FPS: u32 = 1;
 
-                // Move the ball based on its velocity
-                self.ball.rect.translate(self.ball.vel);
+        while ggez::timer::check_update_time(ctx, DESIRED_FPS) {
+            // Only handle key presses if the game isn't paused
+            match self.pause_for {
+                0 => {
+                    // Handle player and/or AI control input
+                    self.handle_input(ctx);
 
-                // Check for ball-on-paddle collisions and reverse horizontal velocity of the ball (and increase it slightly!)
-                if let Some(paddle) = self.ball_hit_paddle() {
-                    log::warn!("{:?} paddle hit!", paddle);
+                    // Move the ball based on its velocity
+                    self.ball.rect.translate(self.ball.vel);
 
-                    // TODO: Where on the paddle did it hit? Adjust the velocity vector accordingly -- THIS IS BROKEN
-                    //self.ball.vel = self.ball_velocity_after_bouncing_off(paddle);
+                    // Check for ball-on-paddle collisions and reverse horizontal velocity of the ball (and increase it slightly!)
+                    if let Some(paddle) = self.ball_hit_paddle() {
+                        log::warn!("{:?} paddle hit!", paddle);
 
-                    // Reverse the direction and slightly increase the horizontal speed
-                    self.ball.vel.x *= -1.01;
-                }
+                        // TODO: Where on the paddle did it hit? Adjust the velocity vector accordingly -- THIS IS BROKEN
+                        //self.ball.vel = self.ball_velocity_after_bouncing_off(paddle);
 
-                // Check for ball-on-wall collisions act accordingly
-                match self.ball_hit_wall() {
-                    // If it hit the top or bottom wall, just reverse the vertical velocity of the ball (and increase it slightly!)
-                    Some(Wall::Top) | Some(Wall::Bottom) => {
-                        log::warn!("Top/Bottom wall hit!");
-                        //self.ball.vel.y *= -1.1;
-                        self.ball.bounce_off(Wall::Top); // This is a little clumsy, but a Wall::Top or Wall::Bottom will do the same thing
+                        // Reverse the direction and slightly increase the horizontal speed
+                        self.ball.vel.x *= -1.01;
                     }
 
-                    // If it hit the left wall, either score a point for P2 in a 2 player game, or dock a point from P1 in a 1 player game
-                    Some(Wall::Left) => {
-                        log::warn!("Left wall hit!");
+                    // Check for ball-on-wall collisions act accordingly
+                    match self.ball_hit_wall() {
+                        // If it hit the top or bottom wall, just reverse the vertical velocity of the ball (and increase it slightly!)
+                        Some(Wall::Top) | Some(Wall::Bottom) => {
+                            log::warn!("Top/Bottom wall hit!");
+                            //self.ball.vel.y *= -1.1;
+                            self.ball.bounce_off(Wall::Top); // This is a little clumsy, but a Wall::Top or Wall::Bottom will do the same thing
+                        }
 
-                        match self.mode {
-                            Mode::OnePlayer(_) => {
-                                self.score.p1 -= 1;
+                        // If it hit the left wall, either score a point for P2 in a 2 player game, or dock a point from P1 in a 1 player game
+                        Some(Wall::Left) => {
+                            log::warn!("Left wall hit!");
 
-                                // Pause for 1 second's worth of frames before starting over
-                                self.pause_for = ggez::timer::fps(ctx) as u64;
+                            match self.mode {
+                                Mode::OnePlayer(_) => {
+                                    self.score.p1 -= 1;
+
+                                    // Pause for 1 second's worth of frames before starting over
+                                    self.pause_for = ggez::timer::fps(ctx) as u64;
+                                }
+                                Mode::TwoPlayer(_, _) => {
+                                    self.score.p2 += 1;
+
+                                    // Pause for 1 second's worth of frames before starting over
+                                    self.pause_for = ggez::timer::fps(ctx) as u64;
+                                }
                             }
-                            Mode::TwoPlayer(_, _) => {
-                                self.score.p2 += 1;
+                        }
+
+                        // If it hit the right wall, score a point for P1 in a 2 player game, otherwise do nothing (in a 1 player game this should never happen)
+                        Some(Wall::Right) => {
+                            log::warn!("Right wall hit!");
+                            if let Mode::TwoPlayer(_, _) = self.mode {
+                                self.score.p1 += 1;
 
                                 // Pause for 1 second's worth of frames before starting over
                                 self.pause_for = ggez::timer::fps(ctx) as u64;
                             }
                         }
+
+                        None => {}
                     }
-
-                    // If it hit the right wall, score a point for P1 in a 2 player game, otherwise do nothing (in a 1 player game this should never happen)
-                    Some(Wall::Right) => {
-                        log::warn!("Right wall hit!");
-                        if let Mode::TwoPlayer(_, _) = self.mode {
-                            self.score.p1 += 1;
-
-                            // Pause for 1 second's worth of frames before starting over
-                            self.pause_for = ggez::timer::fps(ctx) as u64;
-                        }
-                    }
-
-                    None => {}
                 }
+                1 => {
+                    self.pause_for -= 1;
+                    self.ball = Ball::random();
+                }
+                _ => self.pause_for -= 1,
             }
-            1 => {
-                self.pause_for -= 1;
-                self.ball = Ball::random();
-            }
-            _ => self.pause_for -= 1,
         }
 
         Ok(())
@@ -380,21 +333,21 @@ impl event::EventHandler for GameState {
     }
 }
 
-#[derive(Debug)]
-struct Ball {
-    rect: Rect,
-    vel: Vector2<f32>,
-    spd: f32,
+#[derive(Debug, Clone)]
+pub struct Ball {
+    pub(crate) rect: Rect,
+    pub(crate) vel: Vector2<f32>,
+    pub(crate) spd: f32,
 }
 
 impl Ball {
-    fn new(x: f32, y: f32, radius: f32) -> Ball {
+    /*fn new(x: f32, y: f32, radius: f32) -> Ball {
         Ball {
             rect: Rect::new(x, y, radius, radius),
             vel: Vector2::<f32> { x: 0.0, y: 0.0 }, //vel: Vector2::<f32> { x: 1.0, y: -0.5 },
             spd: 0.0,
         }
-    }
+    }*/
 
     fn random() -> Ball {
         use rand::prelude::*;

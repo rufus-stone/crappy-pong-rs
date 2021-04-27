@@ -14,8 +14,22 @@ pub enum Player {
     Computer,
 }
 
+pub struct Snapshot {
+    pub(crate) paddle: ggez::graphics::Rect,
+    pub(crate) ball: crate::core::Ball,
+}
+
+impl Snapshot {
+    pub fn new(paddle: &ggez::graphics::Rect, ball: &crate::core::Ball) -> Self {
+        Self {
+            paddle: *paddle,
+            ball: ball.clone(),
+        }
+    }
+}
+
 pub trait Move {
-    fn make_move(&self, ctx: &mut ggez::Context) -> f32;
+    fn make_move(&self, ctx: &mut ggez::Context, _snapshot: &Snapshot) -> f32;
     fn name(&self) -> &'static str;
 }
 
@@ -48,7 +62,7 @@ impl HumanPlayer {
 }
 
 impl Move for HumanPlayer {
-    fn make_move(&self, ctx: &mut ggez::Context) -> f32 {
+    fn make_move(&self, ctx: &mut ggez::Context, _snapshot: &Snapshot) -> f32 {
         // Check for key presses and move Player 1 paddle accordingly
         if keyboard::is_key_pressed(ctx, self.controls.up) {
             -PADDLE_SPEED

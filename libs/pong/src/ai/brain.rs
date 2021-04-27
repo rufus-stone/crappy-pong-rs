@@ -1,10 +1,12 @@
 use rand::RngCore;
 
-use crate::settings::*;
 use genetic_algorithm as ga;
 use neural_network as nn;
 
 use ga::chromosome::*;
+
+use super::eye::*;
+use crate::settings::*;
 
 #[derive(Clone, Debug)]
 pub struct Brain {
@@ -23,7 +25,7 @@ impl Brain {
     fn network_topology(config: &Config) -> [nn::topology::LayerTopology; 3] {
         [
             nn::topology::LayerTopology {
-                neurons: config.data_inputs,
+                neurons: config.eye_photoreceptors,
             },
             nn::topology::LayerTopology {
                 neurons: config.brain_neurons,
@@ -43,7 +45,9 @@ impl Brain {
         &self.network
     }
 
-    pub fn step(&self, config: &Config) -> f32 {
-        1.0
+    pub fn step(&self, config: &Config, eye: &Eye) -> f32 {
+        let response = self.network.propagate(eye.energies.clone());
+        log::warn!("Brain prop: {:?}", &response);
+        response[0]
     }
 }

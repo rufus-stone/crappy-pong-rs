@@ -9,6 +9,11 @@ pub struct Opt {
     /// 1 = Human vs Human, 2 = Human vs AI, 3 = AI vs Human, 4 = AI vs AI, 5 = Human only, 6 = AI only
     #[structopt(short, long, default_value = "1")]
     pub mode: u8,
+
+    // Target FPS
+    /// Target frames per second (0 = unlimited)
+    #[structopt(short, long, default_value = "0")]
+    pub fps: u8,
 }
 
 #[derive(Debug, Clone)]

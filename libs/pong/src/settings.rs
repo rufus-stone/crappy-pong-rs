@@ -24,7 +24,7 @@ pub const AI_VS_SELF: Mode = Mode::OnePlayer(Player::Computer);
 
 #[derive(Clone, Debug)]
 pub struct Config {
-    pub data_inputs: usize,
+    pub eye_photoreceptors: usize,
     pub brain_neurons: usize,
     pub outputs: usize,
     pub generation_length: usize,
@@ -33,7 +33,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            data_inputs: 5, // Paddle Y, Ball X, Ball Y, Ball VX, Ball VY
+            eye_photoreceptors: 5, // Paddle Y, Ball X, Ball Y, Ball VX, Ball VY
             brain_neurons: 15,
             outputs: 1,            // Whether the move the paddle up or down
             generation_length: 10, // How many serves to play for

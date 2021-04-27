@@ -149,4 +149,22 @@ mod tests {
         // Check the results of the propogation match what we expected
         approx::assert_relative_eq!(propogated.as_slice(), expected.as_slice());
     }
+
+    #[test]
+    fn weights_collection() {
+        // Build two layers with one neuron each
+        let layer1 = Layer::new(vec![Neuron::new(0.1, vec![0.2, 0.3, 0.4])]);
+        let layer2 = Layer::new(vec![Neuron::new(0.5, vec![0.6, 0.7, 0.8])]);
+        let layers = vec![layer1, layer2];
+
+        // Create a new Network with the specified layers
+        let network = Network::new(layers);
+
+        // Collect all the weights of the network (this is effectively creating a new Chromosome)
+        let weights: Vec<f32> = network.weights().collect();
+
+        let expected = vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
+
+        approx::assert_relative_eq!(weights.as_slice(), expected.as_slice());
+    }
 }

@@ -54,3 +54,80 @@ impl IntoIterator for Chromosome {
         self.genes.into_iter()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn length_test() {
+        let chromosome = Chromosome {
+            genes: vec![3.0, 1.0, 2.0],
+        };
+
+        assert_eq!(chromosome.len(), 3);
+    }
+
+    #[test]
+    fn chromosome_iter() {
+        let chromosome = Chromosome {
+            genes: vec![3.0, 1.0, 2.0],
+        };
+
+        // Collect the genes of the chromosome into a new Vec<&f32>
+        let actual: Vec<&f32> = chromosome.iter().collect();
+
+        let expected: Vec<&f32> = vec![&3.0, &1.0, &2.0];
+
+        assert_eq!(actual, expected);
+
+        assert_eq!(actual.len(), 3);
+        approx::assert_relative_eq!(actual[0], &3.0);
+        approx::assert_relative_eq!(actual[1], &1.0);
+        approx::assert_relative_eq!(actual[2], &2.0);
+    }
+
+    #[test]
+    fn chromosome_into_iter() {
+        let chromosome = Chromosome {
+            genes: vec![3.0, 1.0, 2.0],
+        };
+
+        // Collect the genes of the chromosome into a new Vec<&f32>
+        let actual: Vec<f32> = chromosome.into_iter().collect();
+
+        let expected: Vec<f32> = vec![3.0, 1.0, 2.0];
+
+        assert_eq!(actual, expected);
+
+        assert_eq!(actual.len(), 3);
+        approx::assert_relative_eq!(actual[0], 3.0);
+        approx::assert_relative_eq!(actual[1], 1.0);
+        approx::assert_relative_eq!(actual[2], 2.0);
+    }
+
+    #[test]
+    fn chromosome_to_chromosome() {
+        let chromosome = Chromosome {
+            genes: vec![3.0, 1.0, 2.0],
+        };
+
+        let chromosome_copy = chromosome.clone();
+
+        // Collect the genes of the chromosome into a new Vec<f32> (this consumes the chromosome)
+        let new_chromosome: Chromosome = chromosome.into_iter().collect();
+
+        assert_eq!(chromosome_copy, new_chromosome);
+    }
+
+    #[test]
+    fn chromosome_from_iter() {
+        let genes: Vec<f32> = vec![3.0, 1.0, 2.0];
+
+        let chromosome: Chromosome = genes.clone().into_iter().collect();
+
+        approx::assert_relative_eq!(chromosome[0], genes[0]);
+        approx::assert_relative_eq!(chromosome[1], genes[1]);
+        approx::assert_relative_eq!(chromosome[2], genes[2]);
+    }
+}
