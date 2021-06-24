@@ -14,7 +14,6 @@ fn main() -> GameResult {
 
     // What kind of game are we playing? 2 player, 1 player, etc.?
     let game_mode = cli::get_game_mode().unwrap_or(PLAYER_VS_PLAYER);
-
     log::warn!("game_mode: {:?}", &game_mode);
 
     // Create a new ggez Context and EventsLoop

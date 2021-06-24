@@ -17,7 +17,7 @@ impl Eye {
     }
 
     pub fn from_vision(vision: &[f32]) -> Self {
-        log::warn!("New eye from vision: {:?}", vision);
+        //log::warn!("New eye from vision: {:?}", vision);
         Self {
             photoreceptors: vision.to_owned(),
         }

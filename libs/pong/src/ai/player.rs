@@ -15,7 +15,21 @@ pub struct AiPlayer {
 }
 
 impl AiPlayer {
+    /// Create a new AiPlayer with a random Brain
     pub fn random(config: &Config, rng: &mut dyn RngCore) -> AiPlayer {
+        log::warn!("New random AI player");
+        let brain = Brain::random(config, rng);
+
+        AiPlayer {
+            brain,
+            eye: Eye::new(config),
+            config: config.clone(),
+            score: 0,
+        }
+    }
+
+    /// Create a new AiPlayer from a given Brain
+    pub fn from_brain(config: &Config, rng: &mut dyn RngCore) -> AiPlayer {
         log::warn!("New random AI player");
         let brain = Brain::random(config, rng);
 

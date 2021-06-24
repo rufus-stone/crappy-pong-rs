@@ -32,6 +32,23 @@ impl Neuron {
         Neuron { bias, weights }
     }
 
+    /// Create a new Neuron from the specified weights
+    pub fn from_weights(output_neurons: usize, weights: &mut dyn Iterator<Item = f32>) -> Self {
+        let bias = weights
+            .next()
+            .expect("Not enough weights to create Neuron!");
+
+        let weights = (0..output_neurons)
+            .map(|_| {
+                weights
+                    .next()
+                    .expect("Not enough weights to create Neuron!")
+            })
+            .collect();
+
+        Self::new(bias, weights)
+    }
+
     /// Combine the inputs and propogate the output
     pub fn propagate(&self, inputs: &[f32]) -> f32 {
         // There should always be an equal number of inputs and weights (as the weights modify each input)
@@ -95,6 +112,15 @@ mod tests {
         // Check the weights of the neuron
         let expected_weights = vec![0.67383957, 0.8181262, 0.26284897, 0.5238807];
         approx::assert_relative_eq!(neuron.weights.as_slice(), expected_weights.as_slice());
+    }
+
+    #[test]
+    fn neuron_from_weights() {
+        let actual = Neuron::from_weights(3, &mut vec![0.1, 0.2, 0.3, 0.4].into_iter());
+        let expected = Neuron::new(0.1, vec![0.2, 0.3, 0.4]);
+
+        approx::assert_relative_eq!(actual.bias, expected.bias);
+        approx::assert_relative_eq!(actual.weights.as_slice(), expected.weights.as_slice());
     }
 
     #[test]

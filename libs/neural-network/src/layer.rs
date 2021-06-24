@@ -26,6 +26,19 @@ impl Layer {
         Layer { neurons }
     }
 
+    /// Create a new Layer from the specified weights
+    pub fn from_weights(
+        input_size: usize,
+        output_size: usize,
+        weights: &mut dyn Iterator<Item = f32>,
+    ) -> Self {
+        let neurons = (0..output_size)
+            .map(|_| Neuron::from_weights(input_size, weights))
+            .collect();
+
+        Self::new(neurons)
+    }
+
     pub fn propagate(&self, inputs: Vec<f32>) -> Vec<f32> {
         // This can be re-written using .map()
         // Using the .iter() method also implicitely calls Vec::with_capacity() which is nice
