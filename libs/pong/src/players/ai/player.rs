@@ -41,7 +41,7 @@ impl AiPlayer {
         }
     }
 
-    fn random_move() -> f32 {
+    /*fn random_move() -> f32 {
         use rand::Rng;
 
         let mut prng = rand::thread_rng();
@@ -53,7 +53,7 @@ impl AiPlayer {
         } else {
             -PADDLE_SPEED
         }
-    }
+    }*/
 
     pub fn step(&self, _snapshot: &Snapshot) -> f32 {
         // Break out the paddle and ball from the snapshot of game state
@@ -69,7 +69,7 @@ impl AiPlayer {
 }
 
 impl Move for AiPlayer {
-    fn make_move(&self, ctx: &mut ggez::Context, _snapshot: &Snapshot) -> f32 {
+    fn make_move(&self, _ctx: &mut ggez::Context, _snapshot: &Snapshot) -> f32 {
         let desired_move = self.step(_snapshot);
 
         if desired_move < 0.0 {
