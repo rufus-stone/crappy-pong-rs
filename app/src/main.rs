@@ -2,8 +2,9 @@ use ggez::*;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
-use pong::settings::*;
-use pong::*;
+use pong::cli;
+use pong::settings;
+use pong::state::gamestate::*;
 
 fn main() -> GameResult {
     // Turn on logging
@@ -13,7 +14,7 @@ fn main() -> GameResult {
         .unwrap();
 
     // What kind of game are we playing? 2 player, 1 player, etc.?
-    let game_mode = cli::get_game_mode().unwrap_or(PLAYER_VS_PLAYER);
+    let game_mode = cli::get_game_mode().unwrap_or(settings::PLAYER_VS_PLAYER);
     log::warn!("game_mode: {:?}", &game_mode);
 
     // Create a new ggez Context and EventsLoop
@@ -30,9 +31,8 @@ fn main() -> GameResult {
         .unwrap();
 
     // Create a GameState object
-    //let mut prng = ChaCha8Rng::from_seed(Default::default());
     let mut prng = ChaCha8Rng::seed_from_u64(42);
-    let game_state = core::GameState::new(game_mode, &mut prng).unwrap();
+    let game_state = GameState::new(game_mode, &mut prng).unwrap();
 
     // Start the game!
     ggez::event::run(ctx, event_loop, game_state);

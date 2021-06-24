@@ -58,7 +58,8 @@ impl Brain {
         &self.network
     }
 
-    pub fn step(&self, config: &Config, eye: &Eye) -> f32 {
+    /// Run what the Eye sees through the Brain and decide whether to move up or down
+    pub fn step(&self, eye: &Eye) -> f32 {
         let response = self.network.propagate(eye.photoreceptors.clone());
         response[0]
     }

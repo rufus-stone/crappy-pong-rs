@@ -1,7 +1,7 @@
 use rand::RngCore;
 
-use crate::player::Move;
-use crate::player::Snapshot;
+use crate::players::Move;
+use crate::players::Snapshot;
 use crate::settings::*;
 
 use super::brain::*;
@@ -64,7 +64,7 @@ impl AiPlayer {
         let eye = self.eye.step(&self.config, paddle, &ball);
 
         // Second, think about it
-        self.brain.step(&self.config, &eye)
+        self.brain.step(&eye) //(&self.config, &eye)
     }
 }
 

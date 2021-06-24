@@ -1,6 +1,6 @@
 use structopt::StructOpt;
 
-use crate::player::*;
+use crate::game::mode::Mode;
 use crate::settings::*;
 
 #[derive(StructOpt, Debug)]

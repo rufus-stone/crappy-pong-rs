@@ -1,6 +1,6 @@
 use ggez::graphics::Rect;
 
-use crate::core::Ball;
+use crate::entities::ball::Ball;
 use crate::settings::Config;
 use crate::settings::*;
 

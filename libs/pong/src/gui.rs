@@ -3,10 +3,9 @@ use ggez::graphics::*;
 use ggez::{Context, GameResult};
 use glam::*;
 
-use crate::player::*;
+use crate::game::mode::Mode;
 use crate::settings::*;
-
-use crate::core::GameState;
+use crate::state::gamestate::GameState;
 
 impl GameState {
     /// Render the game screen
@@ -57,7 +56,7 @@ impl GameState {
 
         // Create the scoreboard text
         let mut scoreboard_text = match self.mode {
-            Mode::OnePlayer(_) | Mode::TrainAI(_) => {
+            Mode::OnePlayer(_) | Mode::TrainAi(_) => {
                 graphics::Text::new(format!("{0: <10}{1:03}", "P1", self.score.p1))
             }
             Mode::TwoPlayer(_, _) => graphics::Text::new(format!(

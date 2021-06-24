@@ -1,43 +1,18 @@
 use ggez::event;
-use ggez::graphics;
 use ggez::graphics::*;
 use ggez::input::keyboard;
-use ggez::mint::*;
 use ggez::{Context, GameResult};
 use glam::*;
 use rand::RngCore;
 
-use crate::ai::player::*;
 use crate::cli;
-use crate::gui;
-use crate::player::*;
+use crate::entities::{ball::*, paddle::*, wall::*};
+use crate::game::mode::*;
+use crate::players::ai::player::*;
+use crate::players::human::player::*;
+use crate::players::*;
 use crate::settings::*;
-
-#[derive(Debug)]
-pub enum Wall {
-    Top,
-    Bottom,
-    Left,
-    Right,
-}
-
-#[derive(Debug)]
-pub enum Paddle {
-    Left,
-    Right,
-}
-
-#[derive(Debug)]
-pub struct GameState {
-    pub(crate) paddle_left: Rect,
-    pub(crate) paddle_right: Rect,
-    pub(crate) ball: Ball,
-    pub(crate) score: Score,
-    pub(crate) pause_for: u64,
-    pub(crate) mode: Mode,
-    pub(crate) player_one: Box<dyn Move>,
-    pub(crate) player_two: Option<Box<dyn Move>>,
-}
+use crate::state::{gamestate::*, score::*};
 
 impl GameState {
     /// Create a new GameState struct for a game with the specified number of players
@@ -51,7 +26,7 @@ impl GameState {
             ),
 
             paddle_right: match &mode {
-                Mode::OnePlayer(_) | Mode::TrainAI(_) => Rect::new(
+                Mode::OnePlayer(_) | Mode::TrainAi(_) => Rect::new(
                     SCREEN_WIDTH - X_OFFSET - PADDLE_WIDTH,
                     0.0,
                     PADDLE_WIDTH,
@@ -88,7 +63,7 @@ impl GameState {
                         Box::new(AiPlayer::random(&Config::default(), prng))
                     }
                 },
-                Mode::TrainAI(_) => {
+                Mode::TrainAi(_) => {
                     log::warn!("P1: AI training");
                     Box::new(AiPlayer::random(&Config::default(), prng))
                 }
@@ -168,7 +143,7 @@ impl GameState {
         );
 
         self.paddle_right = match &self.mode {
-            Mode::OnePlayer(_) | Mode::TrainAI(_) => Rect::new(
+            Mode::OnePlayer(_) | Mode::TrainAi(_) => Rect::new(
                 SCREEN_WIDTH - X_OFFSET - PADDLE_WIDTH,
                 0.0,
                 PADDLE_WIDTH,
@@ -236,7 +211,7 @@ impl event::EventHandler for GameState {
                                     log::warn!("Left wall hit!");
 
                                     match self.mode {
-                                        Mode::OnePlayer(_) | Mode::TrainAI(_) => {
+                                        Mode::OnePlayer(_) | Mode::TrainAi(_) => {
                                             self.score.p1 -= 1;
 
                                             // Pause for 1 second's worth of frames before starting over
@@ -279,7 +254,7 @@ impl event::EventHandler for GameState {
                 }
             }
             // Don't bother drawing etc for AI training modes
-            Mode::TrainAI(_) => {
+            Mode::TrainAi(_) => {
                 // Handle AI control input
                 self.handle_input(ctx);
 
@@ -331,89 +306,7 @@ impl event::EventHandler for GameState {
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         match &self.mode {
             Mode::OnePlayer(_) | Mode::TwoPlayer(_, _) => self.render_game(ctx), // Only render the screen for proper games
-            Mode::TrainAI(_) => self.render_training(ctx),
+            Mode::TrainAi(_) => self.render_training(ctx),
         }
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct Ball {
-    pub(crate) rect: Rect,
-    pub(crate) vel: Vector2<f32>,
-    pub(crate) spd: f32,
-}
-
-impl Ball {
-    /*fn new(x: f32, y: f32, radius: f32) -> Ball {
-        Ball {
-            rect: Rect::new(x, y, radius, radius),
-            vel: Vector2::<f32> { x: 0.0, y: 0.0 }, //vel: Vector2::<f32> { x: 1.0, y: -0.5 },
-            spd: 0.0,
-        }
-    }*/
-
-    fn random() -> Ball {
-        log::warn!("New ball");
-        use rand::prelude::*;
-
-        let mut prng = rand::thread_rng();
-
-        let mut random_velocity = || -> f32 {
-            let flip = prng.gen::<bool>();
-
-            match flip {
-                true => -prng.gen_range(BALL_MIN_VEL..=BALL_MAX_VEL),
-                false => prng.gen_range(BALL_MIN_VEL..=BALL_MAX_VEL),
-            }
-        };
-
-        let vel_x = random_velocity();
-        let vel_y = random_velocity();
-        let spd: f32 = vel_x.hypot(vel_y);
-
-        Ball {
-            rect: Rect::new(
-                SCREEN_WIDTH / 2.0 - BALL_RADIUS / 2.0,
-                SCREEN_HEIGHT / 2.0 - BALL_RADIUS / 2.0,
-                BALL_RADIUS,
-                BALL_RADIUS,
-            ),
-            vel: Vector2::<f32> { x: vel_x, y: vel_y },
-            spd,
-        }
-    }
-
-    fn bounce_off(&mut self, wall: Wall) {
-        match wall {
-            Wall::Top | Wall::Bottom => {
-                if self.vel.y > 0.0 {
-                    log::info!(
-                        "pos - bvy: {}, bvy * BALL_ACCELERATION: {}, clamped: {}, r: {}",
-                        self.vel.y,
-                        self.vel.y * BALL_ACCELERATION,
-                        (self.vel.y * BALL_ACCELERATION).clamp(BALL_MIN_VEL, BALL_MAX_VEL),
-                        -(self.vel.y * BALL_ACCELERATION).clamp(BALL_MIN_VEL, BALL_MAX_VEL)
-                    );
-                    self.vel.y =
-                        (self.vel.y * -BALL_ACCELERATION).clamp(-BALL_MAX_VEL, -BALL_MIN_VEL);
-                } else {
-                    log::info!(
-                        "neg - bvy: {}, bvy * BALL_ACCELERATION: {}, clamped: {}, r: {}",
-                        self.vel.y,
-                        self.vel.y * BALL_ACCELERATION,
-                        (self.vel.y * BALL_ACCELERATION).clamp(BALL_MIN_VEL, BALL_MAX_VEL),
-                        -(self.vel.y * BALL_ACCELERATION).clamp(BALL_MIN_VEL, BALL_MAX_VEL)
-                    );
-                    self.vel.y = (self.vel.y * BALL_ACCELERATION).clamp(BALL_MIN_VEL, BALL_MAX_VEL);
-                }
-            }
-            _ => {}
-        }
-    }
-}
-
-#[derive(Debug, Default)]
-pub struct Score {
-    pub p1: i16,
-    pub p2: i16,
 }

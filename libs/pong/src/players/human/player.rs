@@ -1,44 +1,9 @@
 use ggez::input::keyboard;
 
+use crate::players::Move;
+use crate::players::Snapshot;
 use crate::settings::*;
 
-#[derive(Debug)]
-pub enum Mode {
-    OnePlayer(Player),
-    TwoPlayer(Player, Player),
-    TrainAI(Player),
-}
-
-#[derive(Debug)]
-pub enum Player {
-    Human,
-    Computer,
-}
-
-pub struct Snapshot {
-    pub(crate) paddle: ggez::graphics::Rect,
-    pub(crate) ball: crate::core::Ball,
-}
-
-impl Snapshot {
-    pub fn new(paddle: &ggez::graphics::Rect, ball: &crate::core::Ball) -> Self {
-        Self {
-            paddle: *paddle,
-            ball: ball.clone(),
-        }
-    }
-}
-
-pub trait Move {
-    fn make_move(&self, ctx: &mut ggez::Context, _snapshot: &Snapshot) -> f32;
-    fn name(&self) -> &'static str;
-}
-
-impl std::fmt::Debug for dyn Move {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(fmt, "Move {{ member: {:?} }}", self.name())
-    }
-}
 #[derive(Debug)]
 pub struct Controls {
     up: keyboard::KeyCode,

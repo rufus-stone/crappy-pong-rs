@@ -14,14 +14,15 @@ pub const BALL_MAX_VEL: f32 = 3.0;
 pub const BALL_MAX_BOUNCE_ANGLE: f32 = 75.0; // Max angle in radians at which a ball can bounce off a paddle
 pub const BALL_ACCELERATION: f32 = 1.0;
 
-use crate::player::*;
+use crate::game::mode::*;
+use crate::players::*;
 pub const PLAYER_VS_PLAYER: Mode = Mode::TwoPlayer(Player::Human, Player::Human);
 pub const PLAYER_VS_AI: Mode = Mode::TwoPlayer(Player::Human, Player::Computer);
 pub const PLAYER_VS_SELF: Mode = Mode::OnePlayer(Player::Human);
 pub const AI_VS_PLAYER: Mode = Mode::TwoPlayer(Player::Computer, Player::Human);
 pub const AI_VS_AI: Mode = Mode::TwoPlayer(Player::Computer, Player::Computer);
 pub const AI_VS_SELF: Mode = Mode::OnePlayer(Player::Computer);
-pub const TRAIN_AI: Mode = Mode::TrainAI(Player::Computer);
+pub const TRAIN_AI: Mode = Mode::TrainAi(Player::Computer);
 
 #[derive(Clone, Debug)]
 pub struct Config {
