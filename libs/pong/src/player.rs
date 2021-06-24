@@ -6,6 +6,7 @@ use crate::settings::*;
 pub enum Mode {
     OnePlayer(Player),
     TwoPlayer(Player, Player),
+    TrainAI(Player),
 }
 
 #[derive(Debug)]

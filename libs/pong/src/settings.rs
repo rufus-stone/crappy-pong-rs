@@ -21,6 +21,7 @@ pub const PLAYER_VS_SELF: Mode = Mode::OnePlayer(Player::Human);
 pub const AI_VS_PLAYER: Mode = Mode::TwoPlayer(Player::Computer, Player::Human);
 pub const AI_VS_AI: Mode = Mode::TwoPlayer(Player::Computer, Player::Computer);
 pub const AI_VS_SELF: Mode = Mode::OnePlayer(Player::Computer);
+pub const TRAIN_AI: Mode = Mode::TrainAI(Player::Computer);
 
 #[derive(Clone, Debug)]
 pub struct Config {

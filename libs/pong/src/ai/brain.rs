@@ -46,8 +46,7 @@ impl Brain {
     }
 
     pub fn step(&self, config: &Config, eye: &Eye) -> f32 {
-        let response = self.network.propagate(eye.energies.clone());
-        log::warn!("Brain prop: {:?}", &response);
+        let response = self.network.propagate(eye.photoreceptors.clone());
         response[0]
     }
 }

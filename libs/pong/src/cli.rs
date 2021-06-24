@@ -6,7 +6,7 @@ use crate::settings::*;
 #[derive(StructOpt, Debug)]
 pub struct Opt {
     // Game mode
-    /// 1 = Human vs Human, 2 = Human vs AI, 3 = AI vs Human, 4 = AI vs AI, 5 = Human only, 6 = AI only
+    /// 1 = Human vs Human, 2 = Human vs AI, 3 = AI vs Human, 4 = AI vs AI, 5 = Human only, 6 = AI only, 7 = train AI
     #[structopt(short, long, default_value = "1")]
     pub mode: u8,
 
@@ -39,6 +39,17 @@ pub fn get_game_mode() -> Result<Mode, ModeError> {
         4 => Ok(AI_VS_AI),
         5 => Ok(PLAYER_VS_SELF),
         6 => Ok(AI_VS_SELF),
+        7 => Ok(TRAIN_AI),
         _ => Err(ModeError),
+    }
+}
+
+pub fn get_target_fps() -> u8 {
+    // Read command line args, if any
+    let args = Opt::from_args();
+
+    match args.fps {
+        0 => 144,
+        _ => args.fps,
     }
 }

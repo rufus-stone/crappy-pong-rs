@@ -6,33 +6,35 @@ use crate::settings::*;
 
 #[derive(Clone, Debug)]
 pub struct Eye {
-    pub(crate) energies: Vec<f32>,
+    pub(crate) photoreceptors: Vec<f32>,
 }
 
 impl Eye {
     pub fn new(config: &Config) -> Self {
         Self {
-            energies: vec![-1.0; config.eye_photoreceptors],
+            photoreceptors: vec![-1.0; config.eye_photoreceptors],
         }
     }
 
-    pub fn from_energies(energies: &[f32]) -> Self {
-        log::warn!("New eye from energies: {:?}", energies);
+    pub fn from_vision(vision: &[f32]) -> Self {
+        log::warn!("New eye from vision: {:?}", vision);
         Self {
-            energies: energies.to_owned(),
+            photoreceptors: vision.to_owned(),
         }
     }
 
     pub fn step(&self, config: &Config, paddle: Rect, ball: &Ball) -> Self {
-        let mut energies: Vec<f32> = vec![0.0; config.eye_photoreceptors];
+        let mut vision: Vec<f32> = vec![0.0; config.eye_photoreceptors];
 
         // Our 5 eye_photoreceptors are: Paddle Y, Ball X, Ball Y, Ball VX, Ball VY
-        energies[0] = paddle.center().y / (SCREEN_HEIGHT - paddle.h);
-        energies[1] = ball.rect.center().x / (SCREEN_WIDTH - ball.rect.w);
-        energies[2] = ball.rect.center().y / (SCREEN_HEIGHT - ball.rect.h);
-        energies[3] = ball.vel.x;
-        energies[4] = ball.vel.y;
+        vision[0] = paddle.center().y / (SCREEN_HEIGHT - paddle.h);
+        vision[1] = ball.rect.center().x / (SCREEN_WIDTH - ball.rect.w);
+        vision[2] = ball.rect.center().y / (SCREEN_HEIGHT - ball.rect.h);
+        vision[3] = ball.vel.x;
+        vision[4] = ball.vel.y;
 
-        Self::from_energies(&energies)
+        log::info!("vision: {:?}", &vision);
+
+        Self::from_vision(&vision)
     }
 }

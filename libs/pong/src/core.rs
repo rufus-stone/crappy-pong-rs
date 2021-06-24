@@ -8,6 +8,7 @@ use glam::*;
 use rand::RngCore;
 
 use crate::ai::player::*;
+use crate::cli;
 use crate::player::*;
 use crate::settings::*;
 
@@ -49,7 +50,7 @@ impl GameState {
             ),
 
             paddle_right: match &mode {
-                Mode::OnePlayer(_) => Rect::new(
+                Mode::OnePlayer(_) | Mode::TrainAI(_) => Rect::new(
                     SCREEN_WIDTH - X_OFFSET - PADDLE_WIDTH,
                     0.0,
                     PADDLE_WIDTH,
@@ -62,7 +63,7 @@ impl GameState {
                     PADDLE_HEIGHT,
                 ),
             },
-            ball: Ball::random(), //Ball::new(SCREEN_WIDTH / 2.0 - BALL_RADIUS / 2.0, SCREEN_HEIGHT / 2.0 - BALL_RADIUS / 2.0, BALL_RADIUS,),
+            ball: Ball::random(),
             score: Score::default(),
             pause_for: 0,
             player_one: match &mode {
@@ -86,6 +87,10 @@ impl GameState {
                         Box::new(AiPlayer::random(&Config::default(), prng))
                     }
                 },
+                Mode::TrainAI(_) => {
+                    log::warn!("P1: AI training");
+                    Box::new(AiPlayer::random(&Config::default(), prng))
+                }
             },
             player_two: match &mode {
                 Mode::TwoPlayer(_, p2) => match p2 {
@@ -152,6 +157,30 @@ impl GameState {
             move_paddle(&mut self.paddle_right, p2_move);
         }
     }
+
+    fn reset_paddles(&mut self) {
+        self.paddle_left = Rect::new(
+            X_OFFSET,
+            SCREEN_HEIGHT / 2.0 - PADDLE_HEIGHT / 2.0,
+            PADDLE_WIDTH,
+            PADDLE_HEIGHT,
+        );
+
+        self.paddle_right = match &self.mode {
+            Mode::OnePlayer(_) | Mode::TrainAI(_) => Rect::new(
+                SCREEN_WIDTH - X_OFFSET - PADDLE_WIDTH,
+                0.0,
+                PADDLE_WIDTH,
+                SCREEN_HEIGHT,
+            ),
+            Mode::TwoPlayer(_, _) => Rect::new(
+                SCREEN_WIDTH - X_OFFSET - PADDLE_WIDTH,
+                SCREEN_HEIGHT / 2.0 - PADDLE_HEIGHT / 2.0,
+                PADDLE_WIDTH,
+                PADDLE_HEIGHT,
+            ),
+        };
+    }
 }
 
 /// Move the specified paddle, but prevent it from moving off the screen
@@ -168,77 +197,124 @@ fn move_paddle(paddle: &mut Rect, amount: f32) {
 impl event::EventHandler for GameState {
     /// Called every frame
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
-        const DESIRED_FPS: u32 = 1;
+        match self.mode {
+            // For regular one or two player games we'll draw stuff properly etc
+            Mode::OnePlayer(_) | Mode::TwoPlayer(_, _) => {
+                let desired_fps = cli::get_target_fps() as u32;
+                //const DESIRED_FPS: u32 = 144;
 
-        while ggez::timer::check_update_time(ctx, DESIRED_FPS) {
-            // Only handle key presses if the game isn't paused
-            match self.pause_for {
-                0 => {
-                    // Handle player and/or AI control input
-                    self.handle_input(ctx);
+                while ggez::timer::check_update_time(ctx, desired_fps) {
+                    // Only handle key presses if the game isn't paused
+                    match self.pause_for {
+                        0 => {
+                            // Handle player and/or AI control input
+                            self.handle_input(ctx);
 
-                    // Move the ball based on its velocity
-                    self.ball.rect.translate(self.ball.vel);
+                            // Move the ball based on its velocity
+                            self.ball.rect.translate(self.ball.vel);
 
-                    // Check for ball-on-paddle collisions and reverse horizontal velocity of the ball (and increase it slightly!)
-                    if let Some(paddle) = self.ball_hit_paddle() {
-                        log::warn!("{:?} paddle hit!", paddle);
+                            // Check for ball-on-paddle collisions and reverse horizontal velocity of the ball (and increase it slightly!)
+                            // This will score a point for P1 if it's a 1 player game
+                            if let Some(paddle) = self.ball_hit_paddle() {
+                                log::warn!("{:?} paddle hit!", paddle);
 
-                        // TODO: Where on the paddle did it hit? Adjust the velocity vector accordingly -- THIS IS BROKEN
-                        //self.ball.vel = self.ball_velocity_after_bouncing_off(paddle);
+                                // Reverse the direction and slightly increase the horizontal speed
+                                self.ball.vel.x *= -1.01;
+                            }
 
-                        // Reverse the direction and slightly increase the horizontal speed
-                        self.ball.vel.x *= -1.01;
-                    }
-
-                    // Check for ball-on-wall collisions act accordingly
-                    match self.ball_hit_wall() {
-                        // If it hit the top or bottom wall, just reverse the vertical velocity of the ball (and increase it slightly!)
-                        Some(Wall::Top) | Some(Wall::Bottom) => {
-                            log::warn!("Top/Bottom wall hit!");
-                            //self.ball.vel.y *= -1.1;
-                            self.ball.bounce_off(Wall::Top); // This is a little clumsy, but a Wall::Top or Wall::Bottom will do the same thing
-                        }
-
-                        // If it hit the left wall, either score a point for P2 in a 2 player game, or dock a point from P1 in a 1 player game
-                        Some(Wall::Left) => {
-                            log::warn!("Left wall hit!");
-
-                            match self.mode {
-                                Mode::OnePlayer(_) => {
-                                    self.score.p1 -= 1;
-
-                                    // Pause for 1 second's worth of frames before starting over
-                                    self.pause_for = ggez::timer::fps(ctx) as u64;
+                            // Check for ball-on-wall collisions act accordingly
+                            match self.ball_hit_wall() {
+                                // If it hit the top or bottom wall, just reverse the vertical velocity of the ball (and increase it slightly!)
+                                Some(Wall::Top) | Some(Wall::Bottom) => {
+                                    log::warn!("Top/Bottom wall hit!");
+                                    self.ball.bounce_off(Wall::Top); // This is a little clumsy, but a Wall::Top or Wall::Bottom will do the same thing
                                 }
-                                Mode::TwoPlayer(_, _) => {
-                                    self.score.p2 += 1;
 
-                                    // Pause for 1 second's worth of frames before starting over
-                                    self.pause_for = ggez::timer::fps(ctx) as u64;
+                                // If it hit the left wall, either score a point for P2 in a 2 player game, or dock a point from P1 in a 1 player game
+                                Some(Wall::Left) => {
+                                    log::warn!("Left wall hit!");
+
+                                    match self.mode {
+                                        Mode::OnePlayer(_) | Mode::TrainAI(_) => {
+                                            self.score.p1 -= 1;
+
+                                            // Pause for 1 second's worth of frames before starting over
+                                            self.pause_for = ggez::timer::fps(ctx) as u64;
+                                        }
+                                        Mode::TwoPlayer(_, _) => {
+                                            self.score.p2 += 1;
+
+                                            // Pause for 1 second's worth of frames before starting over
+                                            self.pause_for = ggez::timer::fps(ctx) as u64;
+                                        }
+                                    }
                                 }
+
+                                // If it hit the right wall, score a point for P1 in a 2 player game, otherwise do nothing (in a 1 player game this should never happen)
+                                Some(Wall::Right) => {
+                                    log::warn!("Right wall hit!");
+                                    if let Mode::TwoPlayer(_, _) = self.mode {
+                                        self.score.p1 += 1;
+
+                                        // Pause for 1 second's worth of frames before starting over
+                                        self.pause_for = ggez::timer::fps(ctx) as u64;
+                                    }
+                                }
+
+                                None => {}
                             }
                         }
+                        1 => {
+                            self.pause_for -= 1;
 
-                        // If it hit the right wall, score a point for P1 in a 2 player game, otherwise do nothing (in a 1 player game this should never happen)
-                        Some(Wall::Right) => {
-                            log::warn!("Right wall hit!");
-                            if let Mode::TwoPlayer(_, _) = self.mode {
-                                self.score.p1 += 1;
+                            // Reset the ball
+                            self.ball = Ball::random();
 
-                                // Pause for 1 second's worth of frames before starting over
-                                self.pause_for = ggez::timer::fps(ctx) as u64;
-                            }
+                            // Reset the paddles
+                            self.reset_paddles();
                         }
-
-                        None => {}
+                        _ => self.pause_for -= 1,
                     }
                 }
-                1 => {
-                    self.pause_for -= 1;
-                    self.ball = Ball::random();
+            }
+            // Don't bother drawing etc for AI training modes
+            Mode::TrainAI(_) => {
+                // Handle AI control input
+                self.handle_input(ctx);
+
+                // Move the ball based on its velocity
+                self.ball.rect.translate(self.ball.vel);
+
+                // Check for ball-on-paddle collisions and reverse horizontal velocity of the ball (and increase it slightly!)
+                if let Some(paddle) = self.ball_hit_paddle() {
+                    log::warn!("{:?} paddle hit!", paddle);
+
+                    // Reverse the direction and slightly increase the horizontal speed
+                    self.ball.vel.x *= -1.01;
                 }
-                _ => self.pause_for -= 1,
+
+                // Check for ball-on-wall collisions act accordingly
+                match self.ball_hit_wall() {
+                    // If it hit the top or bottom wall, just reverse the vertical velocity of the ball (and increase it slightly!)
+                    Some(Wall::Top) | Some(Wall::Bottom) => {
+                        log::warn!("Top/Bottom wall hit!");
+                        self.ball.bounce_off(Wall::Top); // This is a little clumsy, but a Wall::Top or Wall::Bottom will do the same thing
+                    }
+
+                    // If the ball hit the left wall, stop the sim and return the score
+                    Some(Wall::Left) => {
+                        log::warn!("Left wall hit!");
+
+                        self.score.p1 -= 1;
+                        // TODO: Stop the simulation
+                    }
+
+                    // In a 1 player game the ball should never hit the right wall, so don't bother handling that
+                    Some(_) => {}
+
+                    // Do nothing if the ball didn't hit a wall
+                    None => {}
+                }
             }
         }
 
@@ -293,7 +369,7 @@ impl event::EventHandler for GameState {
 
         // Create the scoreboard text
         let mut scoreboard_text = match self.mode {
-            Mode::OnePlayer(_) => {
+            Mode::OnePlayer(_) | Mode::TrainAI(_) => {
                 graphics::Text::new(format!("{0: <10}{1:03}", "P1", self.score.p1))
             }
             Mode::TwoPlayer(_, _) => graphics::Text::new(format!(
