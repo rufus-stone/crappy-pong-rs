@@ -9,7 +9,7 @@ pub mod crossover;
 pub mod individual;
 pub mod mutation;
 pub mod selection;
-mod statistics;
+pub mod statistics;
 
 #[derive(Clone, Debug)]
 pub struct GeneticAlgorithm<S, C, G> {

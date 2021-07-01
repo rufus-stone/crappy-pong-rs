@@ -19,6 +19,9 @@ jobs:
           toolchain: stable
           override: true
 
+      - name: Install dependencies
+        run: sudo apt-get install libasound2-dev
+
       - name: Run cargo test
         uses: actions-rs/cargo@v1
         with:

@@ -17,7 +17,7 @@ fn main() -> GameResult {
     let game_mode = cli::get_game_mode().unwrap_or(settings::PLAYER_VS_PLAYER);
     log::warn!("game_mode: {:?}", &game_mode);
 
-    // Create a new ggez Context and EventsLoop
+    // Create a new ggez Context and EventLoop
     let (ctx, event_loop) = ContextBuilder::new(settings::GAME_TITLE, "Rufus Stone")
         .window_setup(
             conf::WindowSetup::default()
