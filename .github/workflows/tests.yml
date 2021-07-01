@@ -19,8 +19,8 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Install dependencies
-        run: sudo apt-get install libasound2-dev
+      - name: Install dependencies for ggez
+        run: sudo apt-get install libasound2-dev libudev-dev pkg-config
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
