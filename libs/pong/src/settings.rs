@@ -30,6 +30,7 @@ pub struct Config {
     pub brain_neurons: usize,
     pub outputs: usize,
     pub generation_length: usize,
+    pub population_size: usize,
 }
 
 impl Default for Config {
@@ -39,6 +40,7 @@ impl Default for Config {
             brain_neurons: 15,
             outputs: 1,            // Whether the move the paddle up or down
             generation_length: 10, // How many serves to play for
+            population_size: 100,  // How big should the pool of trainee AIs be
         }
     }
 }

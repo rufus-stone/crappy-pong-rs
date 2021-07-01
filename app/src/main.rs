@@ -5,6 +5,7 @@ use rand_chacha::ChaCha8Rng;
 use pong::cli;
 use pong::settings;
 use pong::state::gamestate::*;
+use pong::state::simulation::*;
 
 fn main() -> GameResult {
     // Turn on logging
@@ -30,10 +31,30 @@ fn main() -> GameResult {
         .build()
         .unwrap();
 
-    // Create a GameState object
-    let mut prng = ChaCha8Rng::seed_from_u64(42);
-    let game_state = GameState::new(game_mode, &mut prng).unwrap();
+    // Either start training the AI or playing the game
+    match game_mode {
+        pong::game::mode::Mode::TrainAi(_) => {
+            // Create a default Config
+            let config = settings::Config::default();
 
-    // Start the game!
-    ggez::event::run(ctx, event_loop, game_state);
+            // Create a predictable prng for training
+            let mut prng = ChaCha8Rng::seed_from_u64(42);
+
+            // Create a new Simulation
+            let simulation = Simulation::new(&config, &mut prng);
+
+            // Start the training!
+            ggez::event::run(ctx, event_loop, simulation);
+        }
+        _ => {
+            // Create a proper prng
+            let mut prng = rand::thread_rng();
+
+            // Create a new GameState
+            let game_state = GameState::new(game_mode, &mut prng).unwrap();
+
+            // Start the game!
+            ggez::event::run(ctx, event_loop, game_state);
+        }
+    };
 }
